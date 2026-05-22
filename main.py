@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 import models, schemas, database
+import random
+from constants import ROAST_DATABASE
 
 app = FastAPI(title="OtakuDex API")
 
@@ -31,29 +33,31 @@ def create_media(item: schemas.MediaCreate, db: Session = Depends(get_db)):
 # --- THE ROAST ENGINE & COMPATIBILITY ---
 @app.get("/user/roast/")
 def get_user_roast(user_id: int, db: Session = Depends(database.get_db)):
-    # Se obtienen los animes del usuario
-    user_media = db.query(models.Media).all() # En una app real, Se filtraría por user_id
+    user_media = db.query(models.Media).all() 
     
     if not user_media:
         return {"roast": "Tu lista está tan vacía como el final de Evangelion. Ve a ver algo antes de pedirme opinión."}
 
-    total_items = len(user_media)
+    total = len(user_media)
     shonen_count = len([m for m in user_media if "Shonen" in (m.tropes or "")])
     cyberpunk_count = len([m for m in user_media if "Cyberpunk" in (m.aesthetic or "")])
+    romance_count = len([m for m in user_media if "Romance" in (m.tropes or "")])
 
-    # Lógica del Roast
-    if shonen_count / total_items > 0.7:
-        return {
-            "level": "NPC Básico",
-            "roast": f"El 70% de tu lista es Shonen. Apuesto a que tu personalidad se basa en gritar nombres de ataques. ¿Sabías que existen animes donde la gente habla en lugar de golpearse?"
-        }
-    elif cyberpunk_count > 0:
-        return {
-            "level": "Pretencioso Aesthetic",
-            "roast": "Oh, veo que tienes estética Cyberpunk. Seguro usas lentes sin aumento y crees que eres profundo porque entendiste Serial Experiments Lain a la primera. No nos engañas."
-        }
-    
-    return {"roast": "Tienes gustos tan variados que ni yo sé cómo insultarte... por ahora."}
+    # Se elige la categoría del insulto
+    if shonen_count / total > 0.6:
+        category = "SHONEN_LOVER"
+    elif romance_count / total > 0.4:
+        category = "ROMANCE_ADDICT"
+    else:
+        category = "SNOB_PRETENTIOUS"
+
+    # Selecciona un insulto aleatorio de esa categoría en constants.py
+    insulto = random.choice(ROAST_DATABASE[category])
+
+    return {
+        "level": category.replace("_", " ").title(),
+        "roast": insulto
+    }
 
 @app.post("/compatibility/compare")
 def compare_users(user1_media_ids: List[int], user2_media_ids: List[int]):
@@ -172,3 +176,34 @@ def check_spoiler(media_id: int, user_chapter: int, db: Session = Depends(databa
             "count": len(spoilers_ahead)
         }
     return {"safe": True, "message": "Estás al día o no hay eventos registrados aún. ¡Navega seguro!"}
+
+@app.get("/compatibility/group-safety")
+def check_group_safety(media_id: int, user_chapters: List[int], db: Session = Depends(database.get_db)):
+    # El punto de seguridad es el capítulo del que va más atrás
+    slowest_member_chapter = min(user_chapters)
+    
+    # Se bscan spoilers que estén POR DELANTE del que va más lento
+    potential_spoilers = db.query(models.Milestone).filter(
+        models.Milestone.media_id == media_id,
+        models.Milestone.chapter_occurrence > slowest_member_chapter
+    ).all()
+    
+    return {
+        "group_safe_chapter": slowest_member_chapter,
+        "danger_zone": len(potential_spoilers) > 0,
+        "warning": f"¡Cuidado! El grupo no puede hablar de nada después del capítulo {slowest_member_chapter}." if potential_spoilers else "¡Todos al día! Pueden funar personajes libremente."
+    }
+
+@app.get("/characters/{char_id}/status")
+def get_character_status(char_id: int, current_chapter: int, db: Session = Depends(database.get_db)):
+    char = db.query(models.Character).filter(models.Character.id == char_id).first()
+    if not char:
+        raise HTTPException(status_code=404, detail="Personaje no encontrado")
+    
+    # Lógica de Spoiler Control:
+    if char.death_chapter and current_chapter < char.death_chapter:
+        return {"name": char.name, "status": "Vivo/Seguro", "msg": "Puedes buscar fanarts sin miedo."}
+    elif char.death_chapter and current_chapter >= char.death_chapter:
+        return {"name": char.name, "status": "FALLECIDO", "msg": "¡SPOILER! No entres a TikTok o te vas a deprimir."}
+    
+    return {"name": char.name, "status": "Vivo", "msg": "Todo despejado."}

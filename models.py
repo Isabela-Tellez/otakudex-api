@@ -23,3 +23,12 @@ class Milestone(Base):
     media_id = Column(Integer, ForeignKey("media.id"))
     
     owner = relationship("Media", back_populates="milestones")
+
+class Character(Base):
+    __tablename__ = "characters"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    media_id = Column(Integer, ForeignKey("media.id"))
+    death_chapter = Column(Integer, nullable=True) # Si es nulo, sigue vivo en el manga/anime
+    
+    owner = relationship("Media")
