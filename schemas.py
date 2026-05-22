@@ -1,17 +1,35 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
-# Lo que el usuario envía cuando crea un anime
+# --- ESQUEMAS PARA HITOS (SPOILERS) ---
+class MilestoneBase(BaseModel):
+    description: str
+    chapter_occurrence: int
+    is_spoiler: bool = True
+
+class MilestoneCreate(MilestoneBase):
+    pass
+
+class MilestoneResponse(MilestoneBase):
+    id: int
+    media_id: int
+
+    class Config:
+        from_attributes = True
+
+# --- ESQUEMAS PARA ANIME/MANGA ---
 class MediaCreate(BaseModel):
     title: str
     type: str  # Anime o Manga
-    tropes: Optional[str] = None
+    tropes: Optional[str] = None # Ej: "Tsundere, Enemies to Lovers"
+    aesthetic: Optional[str] = None # Ej: "90s Cyberpunk"
     safe_chapter: int = 0
 
-# Lo que la API le devuelve al usuario (incluye el ID de la base de datos)
 class MediaResponse(MediaCreate):
     id: int
     is_completed: bool
+    # Esto permite que cuando se consulte un anime, se puedan ver sus spoilers si se quiere
+    milestones: List[MilestoneResponse] = []
 
     class Config:
         from_attributes = True
