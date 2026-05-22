@@ -1,10 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-import models, schemas, database
+import models, schemas, database, auth
+from database import SessionLocal, engine
 import random
 from constants import ROAST_DATABASE
 
 app = FastAPI(title="OtakuDex API")
+
+#Crea las tablas (Se crea la tabla de users automáticamente)
+models.Base.metadata.create_all(bind=engine)
 
 # Crea las tablas en la base de datos (si Docker está listo)
 models.Base.metadata.create_all(bind=database.engine)
@@ -83,6 +87,27 @@ def compare_users(user1_media_ids: List[int], user2_media_ids: List[int]):
         "common_titles_count": len(comun),
         "verdict": mensaje
     }
+
+@app.post("/users/", response_model=schemas.UserOut)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # 1. Verificar si el usuario ya existe
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya está registrado")
+    
+    # 2. Encriptar la contraseña (GDPR Compliance)
+    hashed_pass = auth.get_password_hash(user.password)
+    
+    # 3. Crear el nuevo usuario
+    new_user = models.User(
+        username=user.username, 
+        hashed_password=hashed_pass
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 @app.get("/user/roast/{user_id}")
 def roast_user(user_id: int):

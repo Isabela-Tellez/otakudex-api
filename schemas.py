@@ -1,6 +1,20 @@
 from pydantic import BaseModel
 from typing import Optional, List
 
+# Esquemas para la creación de usuarios (Se recibe la contraseña)
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+# Esquema para mostrar usuario (¡SIN CONTRASEÑA!)
+class UserOut(BaseModel):
+    id: int
+    username: str
+    is_active: bool
+
+    class config:
+        from_attributes = True
+
 # --- ESQUEMAS PARA HITOS (SPOILERS) ---
 class MilestoneBase(BaseModel):
     description: str

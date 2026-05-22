@@ -1,9 +1,21 @@
 from database import Base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String 
 from sqlalchemy.orm import relationship
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)  #Aqui va la clave encriptada
+    is_active = Column(Boolean, default=True)
+
+    # Relación: Un usuario es dueño de muchos registros de media
+    items = relationship("Media", back_populates="owner")
 class Media(Base):
     __tablename__ = "media"
+    owner_id = Column(Integer, ForeignKey("users.id")) #El vínculo
+    owner: relationship("User", back_populates="items")
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     type = Column(String)  # Anime / Manga
