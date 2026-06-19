@@ -4,6 +4,7 @@ import models, schemas, database, auth
 from database import SessionLocal, engine
 import random
 from constants import ROAST_DATABASE
+from typing import List
 
 app = FastAPI(title="OtakuDex API")
 
