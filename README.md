@@ -12,3 +12,5 @@ Esta API permite gestionar y realizar seguimiento de tu biblioteca personal de o
 
 ##Futuras Mejoras
 Implementación de sistema de cross-media (Relaciones entre Novela, Manhwa, Anime y Live Action)
+
+[https://www.kaggle.com/datasets/patelris/anime-and-manga-dataset-2026?select=manga_dataset.csv]
