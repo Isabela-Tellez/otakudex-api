@@ -47,3 +47,25 @@ class MediaResponse(MediaCreate):
 
     class Config:
         from_attributes = True
+
+# Esquema plano para listar las adaptaciones dentro del árbol principal
+class RelatedMediaOut(BaseModel):
+    id: int
+    title: str
+    type: str
+    status: str
+
+    class Config:
+        from_attributes = True
+
+# Esquema completo para consultar un medio con todo su ecosistema transmedia
+class MediaTreeOut(BaseModel):
+    id: int
+    title: str
+    type: str
+    tropes: Optional[str] = None
+    aesthetic: Optional[str] = None
+    related_to: List[RelatedMediaOut] = []
+
+    class Config:
+        from_attributes = True
