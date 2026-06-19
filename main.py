@@ -233,3 +233,21 @@ def get_character_status(char_id: int, current_chapter: int, db: Session = Depen
         return {"name": char.name, "status": "FALLECIDO", "msg": "¡SPOILER! No entres a TikTok o te vas a deprimir."}
     
     return {"name": char.name, "status": "Vivo", "msg": "Todo despejado."}
+
+@app.get("/media/{media_id}/tree", response_model=schemas.MediaTreeOut)
+def obtener_arbol_transmedia(media_id: int, db: Session = Depends(get_db)):
+    """
+    Busca un medio por su ID y devuelve toda su red de relaciones cruzadas
+    (Animes, Mangas, Manhwas y Manhuas conectados).
+    """
+    item_media = db.query(models.Media).filter(models.Media.id == media_id).first()
+    if not item_media:
+        raise HTTPException(status_code=404, detail="El contenido no existe")
+    
+    # Combio de relaciones bidireccionales (origen y destino) para unificar el grafo
+    relaciones_totales = list(item_media.related_to) + list(item_media.related_from)
+    
+    # Eliminación de duplicados por ID manteniendo la lista limpia
+    item_media.related_to = list({rel.id: rel for rel in relaciones_totales}.values())
+    
+    return item_media
