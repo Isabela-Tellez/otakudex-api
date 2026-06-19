@@ -7,10 +7,9 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)  # Clave encriptada
+    hashed_password = Column(String)  
     is_active = Column(Boolean, default=True)
 
-    # Relación: Un usuario es dueño de muchos registros de media
     items = relationship("Media", back_populates="owner")
 
 # Tabla intermedia para el Grafo de Relaciones Transmedia (M:N)
@@ -19,27 +18,31 @@ class MediaRelation(Base):
     
     source_id = Column(Integer, ForeignKey("media.id", ondelete="CASCADE"), primary_key=True)
     target_id = Column(Integer, ForeignKey("media.id", ondelete="CASCADE"), primary_key=True)
-    relation_type = Column(String, default="Adaptación") # Ej: "Adaptación", "Precuela", "Secuela"
+    relation_type = Column(String, default="Adaptación") 
 
 class Media(Base):
     __tablename__ = "media"
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
-    type = Column(String, nullable=False)  # Estricto: "Anime", "Manga", "Manhwa" o "Manhua"
+    type = Column(String, nullable=False)  # "Anime", "Manga", "Manhwa", "Manhua", "Live Action"
+    
+    # Nuevas columnas requeridas para el dataset 2026
+    status = Column(String, default="Unknown")
+    episodes_count = Column(Integer, default=0)
     
     # Para el "Culture & Tropes Encyclopedia"
-    tropes = Column(String) # Ej: "Tsundere, White Hair, Enemies to Lovers"
-    aesthetic = Column(String) # Ej: "90s Cyberpunk, Neon Pastel"
+    tropes = Column(String) 
+    aesthetic = Column(String) 
     
-    # Vínculo con el Usuario dueño del registro
+    # Vínculo con el Usuario
     owner_id = Column(Integer, ForeignKey("users.id")) 
     owner = relationship("User", back_populates="items")
     
-    # Relación con hitos (para el Spoiler Control)
-    milestones = relationship("Milestone", back_populates="owner")
+    # [AÑADIDO AQUÍ] Relación con las alertas de Spoilers / Eventos críticos
+    events = relationship("MediaEvent", back_populates="media", cascade="all, delete-orphan")
 
-    # Relación autoreferencial para conectar formatos cruzados (Ecosistema Transmedia)
+    # Relación autoreferencial (Ecosistema Transmedia)
     related_to = relationship(
         "Media",
         secondary="media_relations",
@@ -48,21 +51,23 @@ class Media(Base):
         backref="related_from"
     )
 
-class Milestone(Base):
-    __tablename__ = "milestones"
-    id = Column(Integer, primary_key=True)
-    description = Column(String) # Ej: "Muerte de X", "Revelación de traición"
-    chapter_occurrence = Column(Integer) # En qué capítulo pasa
+class MediaEvent(Base):
+    __tablename__ = "media_events"
+    id = Column(Integer, primary_key=True, index=True)
+    media_id = Column(Integer, ForeignKey("media.id", ondelete="CASCADE"))
+    episode_or_chapter = Column(Integer, nullable=False)
+    event_type = Column(String, nullable=False)  # Ej: "Muerte", "Gore", "Giro de trama"
+    description = Column(String, nullable=False)
     is_spoiler = Column(Boolean, default=True)
-    media_id = Column(Integer, ForeignKey("media.id"))
-    
-    owner = relationship("Media", back_populates="milestones")
+
+    # Relación inversa hacia Media
+    media = relationship("Media", back_populates="events")
 
 class Character(Base):
     __tablename__ = "characters"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    media_id = Column(Integer, ForeignKey("media.id"))
-    death_chapter = Column(Integer, nullable=True) # Si es nulo, sigue vivo
+    media_id = Column(Integer, ForeignKey("media.id", ondelete="CASCADE"))
+    death_chapter = Column(Integer, nullable=True) 
     
-    owner = relationship("Media")
+    media_owner = relationship("Media")

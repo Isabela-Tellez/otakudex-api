@@ -69,3 +69,26 @@ class MediaTreeOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class MediaEventOut(BaseModel):
+    id: int
+    episode_or_chapter: int
+    event_type: str
+    description: str
+    is_spoiler: bool
+
+    class Config:
+        from_attributes = True
+
+# Actualiza también el esquema principal agregando este campo al final:
+class MediaTreeOut(BaseModel):
+    id: int
+    title: str
+    type: str
+    tropes: Optional[str] = None
+    aesthetic: Optional[str] = None
+    related_to: List[RelatedMediaOut] = []
+    events: List[MediaEventOut] = [] # <-- Nueva lista de alertas vinculadas
+
+    class Config:
+        from_attributes = True
